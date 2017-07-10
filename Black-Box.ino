@@ -44,11 +44,17 @@ void setup() {
 
 
 void loop() {
-  if ( counter == 10)
+  if ( counter == 9)
   {
     counter = 0;
     //EEPROM.clear();
     //EEPROM.write();
+    for(int i = 0; i < 9; i++)
+    {
+//      Serial.println(acceleration[1][i]);
+//      Serial.println(acceleration[2][i]);
+//      Serial.println(acceleration[3][i]);
+    }
   }
   recordAccelRegisters();
   recordGyroRegisters();
@@ -126,49 +132,55 @@ void storeData( float gForceX, float gForceY, float gForceZ, float velocityX, fl
   displacement[3][counter] = displacementZ;
 }
 void printData() {
-  Serial.print("Gyro (deg)");
-  Serial.print(" X=");
-  Serial.print(rotX);
-  Serial.print(" Y=");
-  Serial.print(rotY);
-  Serial.print(" Z=");
-  Serial.print(rotZ);
-  Serial.print(" Accel (g)");
+//  Serial.print("Gyro (deg)");
+//  Serial.print(" X=");
+//  Serial.print(rotX);
+//  Serial.print(" Y=");
+//  Serial.print(rotY);
+//  Serial.print(" Z=");
+//  Serial.print(rotZ);
+  //Serial.print(" Accel (g)");
   Serial.print(" X=");
   Serial.print(gForceX);
+  Serial.print(" === ");
+  Serial.println(acceleration[1][counter]);
   Serial.print(" Y=");
   Serial.print(gForceY);
+  Serial.print(" === ");
+  Serial.println(acceleration[2][counter]);
   Serial.print(" Z=");
   Serial.print(gForceZ); //add "ln" later
+  Serial.print(" === ");
+  Serial.println(acceleration[3][counter]);
 }
 
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getVelocity() {
   velocityX = ((gForceX - 0.06) * 9.81 * delayTime); 
-  Serial.print(" (m/s) X = ");
-  Serial.print(velocityX);
+//  Serial.print(" (m/s) X = ");
+//  Serial.print(velocityX);
   
   velocityY = ((gForceY + 0.07) * 9.81 * delayTime);
-  Serial.print(" Y = ");
-  Serial.print(velocityY);
+//  Serial.print(" Y = ");
+//  Serial.print(velocityY);
   
   velocityZ = ((gForceZ - 0.97) * 9.81 * delayTime);
-  Serial.print(" Z = ");
-  Serial.print(velocityZ);
+//  Serial.print(" Z = ");
+//  Serial.print(velocityZ);
 }
 
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getDisplacement() {
   float displacementX = (velocityX * delayTime); 
-  Serial.print(" (m) X = ");
-  Serial.print(displacementX);
+//  Serial.print(" (m) X = ");
+//  Serial.print(displacementX);
   
   float displacementY = (velocityY * delayTime);
-  Serial.print(" Y = ");
-  Serial.print(displacementY);
+//  Serial.print(" Y = ");
+//  Serial.print(displacementY);
   
   float displacementZ = (velocityZ * delayTime);
-  Serial.print(" Z = ");
-  Serial.println(displacementZ);
+//  Serial.print(" Z = ");
+//  Serial.println(displacementZ);
 }
 
