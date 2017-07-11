@@ -44,9 +44,10 @@ void setup() {
 
 
 void loop() {
-//  if ( counter == 9)
-//  {
-//    counter = 0;
+ if ( counter == 10)
+{
+  counter = 0;
+}
 //    //EEPROM.clear();
 //    //EEPROM.write();
 //  //  for(int i = 0; i < 9; i++)
@@ -123,25 +124,25 @@ void processGyroData() {
 //void storeData( float gForceX, float gForceY, float gForceZ, float velocityX, float velocityY, float velocityZ, float displacementX, float displacementY, float displacementZ)
 void storeData()
 {
-  acceleration[1][counter] = gForceX;
-  acceleration[2][counter] = gForceY;
-  acceleration[3][counter] = gForceZ;
+  acceleration[0][counter] = gForceX;
+  acceleration[1][counter] = gForceY;
+  acceleration[2][counter] = gForceZ;
 
   Serial.println("/////////////////////////");
   Serial.print("counter: ");
   Serial.println(counter);
+  Serial.println(acceleration[0][counter]);
   Serial.println(acceleration[1][counter]);
   Serial.println(acceleration[2][counter]);
-  Serial.println(acceleration[3][counter]);
    
 
-  velocity[1][counter] = velocityX;
-  velocity[2][counter] = velocityY;
-  velocity[3][counter] = velocityZ;
+  velocity[0][counter] = velocityX;
+  velocity[1][counter] = velocityY;
+  velocity[2][counter] = velocityZ;
 
-  displacement[1][counter] = displacementX;
-  displacement[2][counter] = displacementY;
-  displacement[3][counter] = displacementZ;
+  displacement[0][counter] = displacementX;
+  displacement[1][counter] = displacementY;
+  displacement[2][counter] = displacementZ;
 }
 void printData() {
 //  Serial.print("Gyro (deg)");
@@ -155,15 +156,15 @@ void printData() {
   Serial.print(" X=");
   Serial.print(gForceX);
   Serial.print(" === ");
-  Serial.println(acceleration[1][counter]);
+  Serial.println(acceleration[0][counter]);
   Serial.print(" Y=");
   Serial.print(gForceY);
   Serial.print(" === ");
-  Serial.println(acceleration[2][counter]);
+  Serial.println(acceleration[1][counter]);
   Serial.print(" Z=");
   Serial.print(gForceZ); //add "ln" later
   Serial.print(" === ");
-  Serial.println(acceleration[3][counter]);
+  Serial.println(acceleration[2][counter]);
 }
 
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
