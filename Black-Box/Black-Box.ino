@@ -32,6 +32,7 @@ float displacementX, displacementY, displacementZ;
 int counter = 0;
 
 // arrays for briefly storing data
+float rotation[3][10];
 float acceleration[3][10];
 float velocity[3][10];
 float displacement[3][10];
@@ -44,28 +45,36 @@ void setup() {
 
 
 void loop() {
+
+ // resets the counter so it does not store data 
+ // beyond the bounds of the array
  if ( counter == 10)
 {
   counter = 0;
 }
-//    //EEPROM.clear();
-//    //EEPROM.write();
-//  //  for(int i = 0; i < 9; i++)
-//  //  {
-////      Serial.println(acceleration[1][i]);
-////      Serial.println(acceleration[2][i]);
-////      Serial.println(acceleration[3][i]);
-//   // }
-//  }
-  
-//  recordGyroRegisters();
-//  getVelocity();
-//  getDisplacement();
+   // EEPROM.clear();
+   // EEPROM.write();
+
+  // stores rotation data from the gyroscope
+  recordGyroRegisters();
+  // stores acceleration data from the accelerometer
   recordAccelRegisters();
-  //storeData(gForceX, gForceY, gForceZ, velocityX, velocityY, velocityZ, displacementX, displacementY, displacementZ);
-  storeData();
+  // converts acceleration data to velocity
+  getVelocity();
+  // converts acceleration data to displacement
+  getDisplacement();
+  // stores X,Y,Z components of rotation in a matrix
+  storeGyroData();
+  // stores X,Y,Z components of acceleration in a matrix
+  storeAccelData();
+  // stores X,Y,Z components of velocity in a matrix
+  storeVeloData();
+  // stores X,Y,Z components of displacement in a matrix
+  storeDispData();
+  // prints the stored data
   printData();
   delay(2000);
+  // increments counter to next position in the array
   counter++;
   Serial.println(counter);
 }
@@ -85,6 +94,7 @@ void setupMPU(){
   Wire.endTransmission(); 
 }
 
+// reads acceleration data
 void recordAccelRegisters() {
   Wire.beginTransmission(0b1101000); //I2C address of the MPU
   Wire.write(0x3B); //Starting register for Accel Readings
@@ -97,12 +107,14 @@ void recordAccelRegisters() {
   processAccelData();
 }
 
+// scales acceleration data read
 void processAccelData(){
   gForceX = accelX / 16384.0;
   gForceY = accelY / 16384.0; 
   gForceZ = accelZ / 16384.0;
 }
 
+// reads gyroscope data
 void recordGyroRegisters() {
   Wire.beginTransmission(0b1101000); //I2C address of the MPU
   Wire.write(0x43); //Starting register for Gyro Readings
@@ -115,44 +127,62 @@ void recordGyroRegisters() {
   processGyroData();
 }
 
+// scales gyroscope data
 void processGyroData() {
   rotX = gyroX / 131.0;
   rotY = gyroY / 131.0; 
   rotZ = gyroZ / 131.0;
 }
 
-//void storeData( float gForceX, float gForceY, float gForceZ, float velocityX, float velocityY, float velocityZ, float displacementX, float displacementY, float displacementZ)
-void storeData()
+// stores X,Y,Z components of rotation in a matrix
+void storeGyroData()
+{
+  rotation[0][counter] = rotX;
+  rotation[1][counter] = rotY;
+  rotation[2][counter] = rotZ;
+}
+
+// stores X,Y,Z components of acceleration in a matrix
+void storeAccelData()
 {
   acceleration[0][counter] = gForceX;
   acceleration[1][counter] = gForceY;
   acceleration[2][counter] = gForceZ;
-
+  
   Serial.println("/////////////////////////");
   Serial.print("counter: ");
   Serial.println(counter);
   Serial.println(acceleration[0][counter]);
   Serial.println(acceleration[1][counter]);
   Serial.println(acceleration[2][counter]);
-   
+}
 
+// stores X,Y,Z components of velocity in a matrix
+void storeVeloData()
+{
   velocity[0][counter] = velocityX;
   velocity[1][counter] = velocityY;
   velocity[2][counter] = velocityZ;
+}
 
+// stores X,Y,Z components of displacement in a matrix
+void storeDispData()
+{
   displacement[0][counter] = displacementX;
   displacement[1][counter] = displacementY;
-  displacement[2][counter] = displacementZ;
+  displacement[2][counter] = displacementZ
 }
+
+// prints data
 void printData() {
-//  Serial.print("Gyro (deg)");
-//  Serial.print(" X=");
-//  Serial.print(rotX);
-//  Serial.print(" Y=");
-//  Serial.print(rotY);
-//  Serial.print(" Z=");
-//  Serial.print(rotZ);
-  //Serial.print(" Accel (g)");
+  Serial.print("Gyro (deg)");
+  Serial.print(" X=");
+  Serial.print(rotX);
+  Serial.print(" Y=");
+  Serial.print(rotY);
+  Serial.print(" Z=");
+  Serial.print(rotZ);
+  Serial.print(" Accel (g)");
   Serial.print(" X=");
   Serial.print(gForceX);
   Serial.print(" === ");
@@ -170,30 +200,30 @@ void printData() {
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getVelocity() {
   velocityX = ((gForceX - 0.06) * 9.81 * delayTime); 
-//  Serial.print(" (m/s) X = ");
-//  Serial.print(velocityX);
+  Serial.print(" (m/s) X = ");
+  Serial.print(velocityX);
   
   velocityY = ((gForceY + 0.07) * 9.81 * delayTime);
-//  Serial.print(" Y = ");
-//  Serial.print(velocityY);
+  Serial.print(" Y = ");
+  Serial.print(velocityY);
   
   velocityZ = ((gForceZ - 0.97) * 9.81 * delayTime);
-//  Serial.print(" Z = ");
-//  Serial.print(velocityZ);
+  Serial.print(" Z = ");
+  Serial.print(velocityZ);
 }
 
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getDisplacement() {
   float displacementX = (velocityX * delayTime); 
-//  Serial.print(" (m) X = ");
-//  Serial.print(displacementX);
+  Serial.print(" (m) X = ");
+  Serial.print(displacementX);
   
   float displacementY = (velocityY * delayTime);
-//  Serial.print(" Y = ");
-//  Serial.print(displacementY);
+  Serial.print(" Y = ");
+  Serial.print(displacementY);
   
   float displacementZ = (velocityZ * delayTime);
-//  Serial.print(" Z = ");
-//  Serial.println(displacementZ);
+  Serial.print(" Z = ");
+  Serial.println(displacementZ);
 }
 
