@@ -37,33 +37,36 @@ float velocity[3][10];
 float displacement[3][10];
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   Wire.begin();
   setupMPU();
 }
 
 
 void loop() {
-  if ( counter == 9)
-  {
-    counter = 0;
-    //EEPROM.clear();
-    //EEPROM.write();
-    for(int i = 0; i < 9; i++)
-    {
-//      Serial.println(acceleration[1][i]);
-//      Serial.println(acceleration[2][i]);
-//      Serial.println(acceleration[3][i]);
-    }
-  }
+//  if ( counter == 9)
+//  {
+//    counter = 0;
+//    //EEPROM.clear();
+//    //EEPROM.write();
+//  //  for(int i = 0; i < 9; i++)
+//  //  {
+////      Serial.println(acceleration[1][i]);
+////      Serial.println(acceleration[2][i]);
+////      Serial.println(acceleration[3][i]);
+//   // }
+//  }
+  
+//  recordGyroRegisters();
+//  getVelocity();
+//  getDisplacement();
   recordAccelRegisters();
-  recordGyroRegisters();
-  getVelocity();
-  getDisplacement();
-  storeData(gForceX, gForceY, gForceZ, velocityX, velocityY, velocityZ, displacementX, displacementY, displacementZ);
+  //storeData(gForceX, gForceY, gForceZ, velocityX, velocityY, velocityZ, displacementX, displacementY, displacementZ);
+  storeData();
   printData();
   delay(2000);
   counter++;
+  Serial.println(counter);
 }
 
 void setupMPU(){
@@ -117,11 +120,20 @@ void processGyroData() {
   rotZ = gyroZ / 131.0;
 }
 
-void storeData( float gForceX, float gForceY, float gForceZ, float velocityX, float velocityY, float velocityZ, float displacementX, float displacementY, float displacementZ)
+//void storeData( float gForceX, float gForceY, float gForceZ, float velocityX, float velocityY, float velocityZ, float displacementX, float displacementY, float displacementZ)
+void storeData()
 {
   acceleration[1][counter] = gForceX;
   acceleration[2][counter] = gForceY;
   acceleration[3][counter] = gForceZ;
+
+  Serial.println("/////////////////////////");
+  Serial.print("counter: ");
+  Serial.println(counter);
+  Serial.println(acceleration[1][counter]);
+  Serial.println(acceleration[2][counter]);
+  Serial.println(acceleration[3][counter]);
+   
 
   velocity[1][counter] = velocityX;
   velocity[2][counter] = velocityY;
