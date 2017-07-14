@@ -21,6 +21,8 @@ the software.
 
 #include <Wire.h>
 
+// calculate actual counter frequency 16Mhz/prescale
+long counterFreq = 16e6/256;  
 long accelX, accelY, accelZ;
 float gForceX, gForceY, gForceZ;
 
@@ -30,6 +32,9 @@ int delayTime = 2;
 float velocityX, velocityY, velocityZ;
 float displacementX, displacementY, displacementZ;
 int counter = 0;
+
+volatile unsigned long cycles = 0;
+long period = 65535;
 
 // arrays for briefly storing data
 float rotation[3][10];
@@ -41,8 +46,24 @@ void setup() {
   Serial.begin(38400);
   Wire.begin();
   setupMPU();
+  cli();
+  // clear bits for timer 0 
+  TCCR1A = 0;
+  TCCR1B = 0;
+  // set timer prescaling to clk/256
+  TCCR1B = ( 1 << 2 );
+  TIMSK1 |= ( 7 << 0 );
+  OCR1A = -1;
+  OCR1B = period - 1;
+  sei();
 }
 
+ISR (TIMER1_COMPB_vect)
+{
+  TCNT1 = 0;
+  cycles++;
+  //Serial.println(cycles);
+}
 
 void loop() {
 
@@ -55,28 +76,47 @@ void loop() {
    // EEPROM.clear();
    // EEPROM.write();
 
-  // stores rotation data from the gyroscope
-  recordGyroRegisters();
-  // stores acceleration data from the accelerometer
-  recordAccelRegisters();
-  // converts acceleration data to velocity
-  getVelocity();
-  // converts acceleration data to displacement
-  getDisplacement();
-  // stores X,Y,Z components of rotation in a matrix
-  storeGyroData();
-  // stores X,Y,Z components of acceleration in a matrix
-  storeAccelData();
-  // stores X,Y,Z components of velocity in a matrix
-  storeVeloData();
-  // stores X,Y,Z components of displacement in a matrix
-  storeDispData();
-  // prints the stored data
-  printData();
-  delay(2000);
-  // increments counter to next position in the array
-  counter++;
-  Serial.println(counter);
+//  // stores rotation data from the gyroscope
+//  recordGyroRegisters();
+//  // stores acceleration data from the accelerometer
+//  recordAccelRegisters();
+//  // converts acceleration data to velocity
+//  getVelocity();
+//  // converts acceleration data to displacement
+//  getDisplacement();
+//  // stores X,Y,Z components of rotation in a matrix
+//  storeGyroData();
+//  // stores X,Y,Z components of acceleration in a matrix
+//  storeAccelData();
+//  // stores X,Y,Z components of velocity in a matrix
+//  storeVeloData();
+//  // stores X,Y,Z components of displacement in a matrix
+//  storeDispData();
+//  // prints the stored data
+//  printData();
+//  delay(2000);
+//  // increments counter to next position in the array
+//  counter++;
+   
+    duration();
+}
+
+void duration()
+{ 
+  int seconds = ( (TCNT1 + (cycles * period)) / counterFreq );
+  int minutes = seconds / 60;
+  int hours = minutes / 60;
+  timeStamp(hours, minutes, seconds);
+}
+
+void timeStamp (int hours, int minutes, int seconds)
+{
+  Serial.print(hours);
+  Serial.print(" : " );
+  Serial.print(minutes - ( hours * 60 ) );
+  Serial.print(" : " );
+  Serial.print( seconds - (minutes * 3600) );
+  Serial.println(" (hours : minutes : seconds) ");
 }
 
 void setupMPU(){
@@ -170,7 +210,7 @@ void storeDispData()
 {
   displacement[0][counter] = displacementX;
   displacement[1][counter] = displacementY;
-  displacement[2][counter] = displacementZ
+  displacement[2][counter] = displacementZ;
 }
 
 // prints data
