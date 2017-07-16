@@ -45,7 +45,7 @@ long period = 65535;
 bool interuptDetected = false;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(38400);
   Wire.begin();
   setupMPU();
   analogRead(3);
@@ -62,17 +62,20 @@ void setup() {
   sei();
 }
 
-ISR (TIMER1_COMPB_vect)
-{
-  TCNT1 = 0;
   cycles++;
   //Serial.println(cycles);
 }
 
 void loop() {
+//  Serial.println(interuptDetected);
   if (interuptDetected)
+  {
+   TCCR1B = 0; 
+   duration();
    whichInterupt();
-
+   // set timer prescaling to clk/256
+   TCCR1B = ( 1 << 2 );
+  }
  // resets the counter so it does not store data 
  // beyond the bounds of the array
  if ( counter == 10)
@@ -100,19 +103,18 @@ void loop() {
   storeDispData();
 //  // prints the stored data
 //  printData();
-//  delay(2000);
+  delay(2000);
 //  // increments counter to next position in the array
-//  counter++;
-   
-    duration();
+  counter++;
 }
-
+///////////////////////////////////////////////////////////////////////////////
+// Timer functions
 void duration()
 { 
-  int seconds = ( (TCNT1 + (cycles * period)) / counterFreq );
+  unsigned long int seconds = ( (TCNT1 + (cycles * period)) / counterFreq );
   int minutes = seconds / 60;
   int hours = minutes / 60;
-  //timeStamp(hours, minutes, seconds);  //Call print funtion for timer
+  timeStamp(hours, minutes, seconds);  //Call print funtion for timer
 }
 
 void timeStamp (int hours, int minutes, int seconds)
@@ -124,6 +126,14 @@ void timeStamp (int hours, int minutes, int seconds)
   Serial.print( seconds - (minutes * 60) - (hours * 60));
   Serial.println(" (hours : minutes : seconds) ");
 }
+
+
+ISR (TIMER1_COMPB_vect)
+{
+  TCNT1 = 0;
+  cycles++;
+}
+//////////////////////////////////////////////////////////////////////////////////////
 
 void setupMPU(){
   Wire.beginTransmission(0b1101000); //This is the I2C address of the MPU (b1101000/b1101001 for AC0 low/high datasheet sec. 9.2)
@@ -261,16 +271,16 @@ void getVelocity() {
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getDisplacement() {
   float displacementX = (velocityX * delayTime); 
-  Serial.print(" (m) X = ");
-  Serial.print(displacementX);
+//  Serial.print(" (m) X = ");
+//  Serial.print(displacementX);
   
   float displacementY = (velocityY * delayTime);
-  Serial.print(" Y = ");
-  Serial.print(displacementY);
+//  Serial.print(" Y = ");
+//  Serial.print(displacementY);
   
   float displacementZ = (velocityZ * delayTime);
-  Serial.print(" Z = ");
-  Serial.println(displacementZ);
+//  Serial.print(" Z = ");
+//  Serial.println(displacementZ);
 }
 
 void distractedDriving()
@@ -282,31 +292,36 @@ void whichInterupt()
 {
   int voltage = analogRead(3);
   Serial.println(voltage);
-// String whichDistraction = "";
-//  if (voltage > 1000)
-//  {
-//   Serial.print("error no distraction");
-//  }
-//  else if (voltage == 0)
-//  {
-//    whichDistraction = "Windows";
-//  }
-//  else if (voltage < 50 && voltage > 0 )
-//  {
-//    whichDistraction = "Radio";
-//  }
-//  else if (voltage > 50 && voltage < 340)
-//  {
-//   whichDistraction = "Brakes";
-//  }
-//  else 
-//  {
-//    whichDistraction = "Accelerometer";
-//  }
-  
+ String whichDistraction = "";
+  if (voltage > 1000)
+  {
+   Serial.print("error no distraction");
+  }
+  else if (voltage == 0)
+  {
+    whichDistraction = "Windows";
+  }
+  else if (voltage < 50 && voltage > 0 )
+  {
+    whichDistraction = "Radio";
+  }
+  else if (voltage > 50 && voltage < 340)
+  {
+   whichDistraction = "Brakes";
+  }
+  else 
+  {
+    whichDistraction = "Accelerometer";
+  }
+  Serial.println(whichDistraction);
   interuptDetected = false;
 }
 
+//void storeDistraction ()
+//{
+//  String distractionType[] =
+//  String timeStamp[] = 
+//}
 
 
 
