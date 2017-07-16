@@ -16,7 +16,7 @@ Revision: 1.0 (July 13th, 2016)
 The software is provided by EEEnthusiast without warranty of any kind. In no event shall the authors or 
 copyright holders be liable for any claim, damages or other liability, whether in an action of contract, 
 tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in 
-the software..
+the software.
 */
 
 #include <Wire.h>
@@ -38,14 +38,18 @@ float rotation[3][10];
 float acceleration[3][10];
 float velocity[3][10];
 float displacement[3][10];
+float interupts [4][10];
 
 volatile unsigned long cycles = 0;
 long period = 65535;
+bool interuptDetected = false;
 
 void setup() {
-  Serial.begin(38400);
+  Serial.begin(9600);
   Wire.begin();
   setupMPU();
+  analogRead(3);
+  attachInterrupt(0, distractedDriving, CHANGE); // interrupt 0 is mapped to pin 2 on the Uno, measure rising edges only
   cli();
   // clear bits for timer 0 
   TCCR1A = 0;
@@ -66,6 +70,8 @@ ISR (TIMER1_COMPB_vect)
 }
 
 void loop() {
+  if (interuptDetected)
+   whichInterupt();
 
  // resets the counter so it does not store data 
  // beyond the bounds of the array
@@ -76,22 +82,22 @@ void loop() {
    // EEPROM.clear();
    // EEPROM.write();
 
-//  // stores rotation data from the gyroscope
-//  recordGyroRegisters();
-//  // stores acceleration data from the accelerometer
-//  recordAccelRegisters();
-//  // converts acceleration data to velocity
-//  getVelocity();
-//  // converts acceleration data to displacement
-//  getDisplacement();
-//  // stores X,Y,Z components of rotation in a matrix
-//  storeGyroData();
-//  // stores X,Y,Z components of acceleration in a matrix
-//  storeAccelData();
-//  // stores X,Y,Z components of velocity in a matrix
-//  storeVeloData();
-//  // stores X,Y,Z components of displacement in a matrix
-//  storeDispData();
+  // stores rotation data from the gyroscope
+  recordGyroRegisters();
+  // stores acceleration data from the accelerometer
+  recordAccelRegisters();
+  // converts acceleration data to velocity
+  getVelocity();
+  // converts acceleration data to displacement
+  getDisplacement();
+  // stores X,Y,Z components of rotation in a matrix
+  storeGyroData();
+  // stores X,Y,Z components of acceleration in a matrix
+  storeAccelData();
+  // stores X,Y,Z components of velocity in a matrix
+  storeVeloData();
+  // stores X,Y,Z components of displacement in a matrix
+  storeDispData();
 //  // prints the stored data
 //  printData();
 //  delay(2000);
@@ -106,7 +112,7 @@ void duration()
   int seconds = ( (TCNT1 + (cycles * period)) / counterFreq );
   int minutes = seconds / 60;
   int hours = minutes / 60;
-  timeStamp(hours, minutes, seconds);
+  //timeStamp(hours, minutes, seconds);  //Call print funtion for timer
 }
 
 void timeStamp (int hours, int minutes, int seconds)
@@ -266,4 +272,42 @@ void getDisplacement() {
   Serial.print(" Z = ");
   Serial.println(displacementZ);
 }
+
+void distractedDriving()
+{
+  interuptDetected = true;
+}
+  
+void whichInterupt()
+{
+  int voltage = analogRead(3);
+  Serial.println(voltage);
+// String whichDistraction = "";
+//  if (voltage > 1000)
+//  {
+//   Serial.print("error no distraction");
+//  }
+//  else if (voltage == 0)
+//  {
+//    whichDistraction = "Windows";
+//  }
+//  else if (voltage < 50 && voltage > 0 )
+//  {
+//    whichDistraction = "Radio";
+//  }
+//  else if (voltage > 50 && voltage < 340)
+//  {
+//   whichDistraction = "Brakes";
+//  }
+//  else 
+//  {
+//    whichDistraction = "Accelerometer";
+//  }
+  
+  interuptDetected = false;
+}
+
+
+
+
 
