@@ -1,50 +1,50 @@
-/*
-===Contact & Support===
-Website: http://eeenthusiast.com/
-Youtube: https://www.youtube.com/EEEnthusiast
-Facebook: https://www.facebook.com/EEEnthusiast/
-Patreon: https://www.patreon.com/EE_Enthusiast
-Revision: 1.0 (July 13th, 2016)
-===Hardware===
-- Arduino Uno R3
-- MPU-6050 (Available from: http://eeenthusiast.com/product/6dof-mpu-6050-accelerometer-gyroscope-temperature/)
-===Software===
-- Latest Software: https://github.com/VRomanov89/EEEnthusiast/tree/master/MPU-6050%20Implementation/MPU6050_Implementation
-- Arduino IDE v1.6.9
-- Arduino Wire library
-===Terms of use===
-The software is provided by EEEnthusiast without warranty of any kind. In no event shall the authors or 
-copyright holders be liable for any claim, damages or other liability, whether in an action of contract, 
-tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in 
-the software.
-*/
+
+// Project Black-Box 
+// Black box designed for vehicles to record acceleration, velocity, displacement, and interactions between the driver and other vehicle
+// features/controls such as windows, radio, accelerator pedal, and brake pedal.
 
 #include <Wire.h>
 
-// calculate actual counter frequency 16Mhz/prescales
+// Calculate actual counter frequency 16Mhz/prescales
 long counterFreq = 16e6/256;  
+
+// Gyro & Accel storage
 long accelX, accelY, accelZ;
 float gForceX, gForceY, gForceZ;
-
 long gyroX, gyroY, gyroZ;
 float rotX, rotY, rotZ;
-int delayTime = 2;
 float velocityX, velocityY, velocityZ;
 float displacementX, displacementY, displacementZ;
+
+// Gyro & Accel calculations 
+int delayTime = 1;
 int counter = 0;
 
-// arrays for briefly storing data
+// Arrays for briefly storing data
 float rotation[3][10];
 float acceleration[3][10];
 float velocity[3][10];
 float displacement[3][10];
 float interupts [4][10];
 
+// Timer variables 
+unsigned long int seconds = 0; //timer calculated in seconds
+int minutes = 0;
+int hours = 0;
 volatile unsigned long cycles = 0;
 long period = 65535;
-bool interuptDetected = false;
+int oldSeconds = -1; // Keeps track of time to detect when new second is reached
 
-void setup() {
+//Interupt variables
+bool interuptDetected = false;
+String whichDistraction = ""; //Stores name of interupt that was triggered
+int interuptInitialTime = 0;
+int interuptFinalTime = 0;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void setup() //Main Setup Code
+{
   Serial.begin(38400);
   Wire.begin();
   setupMPU();
@@ -62,69 +62,65 @@ void setup() {
   sei();
 }
 
-  cycles++;
-  //Serial.println(cycles);
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void loop() {
-//  Serial.println(interuptDetected);
-  if (interuptDetected)
+void loop() { // Main program code
+   
+   duration(); // Calculate updated time values
+  // delay(10); //Ensure values have been updated before if statement condition is tested
+   if ( counter == 10) // resets the counter so it does not store data beyond the bounds of the array 
+  {
+   counter = 0;
+  }
+
+   if (seconds == (oldSeconds + 1)) // make so it outputs movement data once per second!
+   { 
+    printData(); //Print all data that could be stored in eeprom / hard memory 
+    oldSeconds++;
+   }
+
+  if (interuptDetected) 
   {
    TCCR1B = 0; 
-   duration();
    whichInterupt();
-   // set timer prescaling to clk/256
+   // set timer prescaling to clk/256 
    TCCR1B = ( 1 << 2 );
   }
- // resets the counter so it does not store data 
- // beyond the bounds of the array
- if ( counter == 10)
-{
-  counter = 0;
-}
-   // EEPROM.clear();
-   // EEPROM.write();
+  
+  recordGyroRegisters(); // stores rotation data from the gyroscope
+  recordAccelRegisters(); // stores acceleration data from the accelerometer
+ 
+  getVelocity();  // converts acceleration data to velocity
+  getDisplacement();  // converts acceleration data to displacement
+  
+  storeGyroData(); // stores X,Y,Z components of rotation in a matrix
+  storeAccelData();  // stores X,Y,Z components of acceleration in a matrix
+  storeVeloData(); // stores X,Y,Z components of velocity in a matrix
+  storeDispData();  // stores X,Y,Z components of displacement in a matrix
 
-  // stores rotation data from the gyroscope
-  recordGyroRegisters();
-  // stores acceleration data from the accelerometer
-  recordAccelRegisters();
-  // converts acceleration data to velocity
-  getVelocity();
-  // converts acceleration data to displacement
-  getDisplacement();
-  // stores X,Y,Z components of rotation in a matrix
-  storeGyroData();
-  // stores X,Y,Z components of acceleration in a matrix
-  storeAccelData();
-  // stores X,Y,Z components of velocity in a matrix
-  storeVeloData();
-  // stores X,Y,Z components of displacement in a matrix
-  storeDispData();
-//  // prints the stored data
-//  printData();
-  delay(2000);
-//  // increments counter to next position in the array
-  counter++;
+  counter++; // increments counter to next position in the array for storage/display of values
 }
-///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Timer functions
+
 void duration()
 { 
-  unsigned long int seconds = ( (TCNT1 + (cycles * period)) / counterFreq );
-  int minutes = seconds / 60;
-  int hours = minutes / 60;
-  timeStamp(hours, minutes, seconds);  //Call print funtion for timer
+  seconds = ( (TCNT1 + (cycles * period)) / counterFreq );
+  minutes = seconds / 60;
+  hours = minutes / 60;
 }
 
-void timeStamp (int hours, int minutes, int seconds)
+void timeStamp()
 {
+  Serial.print("Time: ");
   Serial.print(hours);
-  Serial.print(" : " );
+  Serial.print("hr ");
   Serial.print(minutes - ( hours * 60 ) );
-  Serial.print(" : " );
+  Serial.print("min ");
   Serial.print( seconds - (minutes * 60) - (hours * 60));
-  Serial.println(" (hours : minutes : seconds) ");
+  Serial.println("sec ");
 }
 
 
@@ -133,7 +129,8 @@ ISR (TIMER1_COMPB_vect)
   TCNT1 = 0;
   cycles++;
 }
-//////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void setupMPU(){
   Wire.beginTransmission(0b1101000); //This is the I2C address of the MPU (b1101000/b1101001 for AC0 low/high datasheet sec. 9.2)
@@ -165,9 +162,9 @@ void recordAccelRegisters() {
 
 // scales acceleration data read
 void processAccelData(){
-  gForceX = accelX / 16384.0;
-  gForceY = accelY / 16384.0; 
-  gForceZ = accelZ / 16384.0;
+  gForceX = accelX / 16384.0 * 9.81;
+  gForceY = accelY / 16384.0 * 9.81; 
+  gForceZ = accelZ / 16384.0 * 9.81;
 }
 
 // reads gyroscope data
@@ -204,13 +201,6 @@ void storeAccelData()
   acceleration[0][counter] = gForceX;
   acceleration[1][counter] = gForceY;
   acceleration[2][counter] = gForceZ;
-  
-  Serial.println("/////////////////////////");
-  Serial.print("counter: ");
-  Serial.println(counter);
-  Serial.println(acceleration[0][counter]);
-  Serial.println(acceleration[1][counter]);
-  Serial.println(acceleration[2][counter]);
 }
 
 // stores X,Y,Z components of velocity in a matrix
@@ -231,89 +221,119 @@ void storeDispData()
 
 // prints data
 void printData() {
-  Serial.print("Gyro (deg)");
-  Serial.print(" X=");
+  Serial.println("////////////////////////////////////////////////////////////////////////////////////////////");
+  timeStamp();
+
+  //Print Gyro 
+  Serial.print("Gyro: ");
+  Serial.print("X = ");
   Serial.print(rotX);
-  Serial.print(" Y=");
+  Serial.print("deg Y = ");
   Serial.print(rotY);
-  Serial.print(" Z=");
+  Serial.print("deg Z = ");
   Serial.print(rotZ);
-  Serial.print(" Accel (g)");
-  Serial.print(" X=");
-  Serial.print(gForceX);
-  Serial.print(" === ");
-  Serial.println(acceleration[0][counter]);
-  Serial.print(" Y=");
-  Serial.print(gForceY);
-  Serial.print(" === ");
-  Serial.println(acceleration[1][counter]);
-  Serial.print(" Z=");
-  Serial.print(gForceZ); //add "ln" later
-  Serial.print(" === ");
-  Serial.println(acceleration[2][counter]);
+  Serial.println("deg");
+
+  //Print Acceleration 
+  Serial.print("Acceleration: ");
+  Serial.print("X = ");
+  Serial.print(acceleration[0][counter]);
+  Serial.print("m/s^2 Y = ");
+  Serial.print(acceleration[1][counter]);
+  Serial.print("m/s^2 Z = ");
+  Serial.print(acceleration[2][counter]);
+  Serial.println("m/s^2");
+
+  //Print Velocity
+  Serial.print("Velocity: ");
+  Serial.print("X = ");
+  Serial.print(velocity[0][counter]);
+  Serial.print("m/s Y = ");
+  Serial.print(velocity[1][counter]);
+  Serial.print("m/s Z = ");
+  Serial.print(velocity[2][counter]);
+  Serial.println("m/s");
+
+  //Print Displacement
+  Serial.print("Displacement: ");
+  Serial.print("X = ");
+  Serial.print(displacement[0][counter]);
+  Serial.print("m Y = ");
+  Serial.print(displacement[1][counter]);
+  Serial.print("m Z = ");
+  Serial.print(displacement[2][counter]);
+  Serial.println("m");
 }
 
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getVelocity() {
-  velocityX = ((gForceX - 0.06) * 9.81 * delayTime); 
-  Serial.print(" (m/s) X = ");
-  Serial.print(velocityX);
-  
-  velocityY = ((gForceY + 0.07) * 9.81 * delayTime);
-  Serial.print(" Y = ");
-  Serial.print(velocityY);
-  
-  velocityZ = ((gForceZ - 0.97) * 9.81 * delayTime);
-  Serial.print(" Z = ");
-  Serial.print(velocityZ);
+  velocityX = ((gForceX) * delayTime); 
+
+  velocityY = ((gForceY) * delayTime);
+
+  velocityZ = ((gForceZ) * delayTime);
 }
 
 // convert to m/s^2 (g's of force to acceleration) and calculate speed (*2)
 void getDisplacement() {
-  float displacementX = (velocityX * delayTime); 
-//  Serial.print(" (m) X = ");
-//  Serial.print(displacementX);
+  displacementX = (velocityX * delayTime); 
   
-  float displacementY = (velocityY * delayTime);
-//  Serial.print(" Y = ");
-//  Serial.print(displacementY);
-  
-  float displacementZ = (velocityZ * delayTime);
-//  Serial.print(" Z = ");
-//  Serial.println(displacementZ);
+  displacementY = (velocityY * delayTime);
+
+  displacementZ = (velocityZ * delayTime);
 }
 
+// Flag variable to run additional code in main loop --> (whichInterupt)
 void distractedDriving()
 {
   interuptDetected = true;
 }
-  
+
+//Determine which interupt was flagged  
 void whichInterupt()
 {
+  bool interuptReleased = false;
   int voltage = analogRead(3);
-  Serial.println(voltage);
- String whichDistraction = "";
+ 
   if (voltage > 1000)
-  {
-   Serial.print("error no distraction");
-  }
+    interuptReleased = true; //Set to print ending message
   else if (voltage == 0)
-  {
-    whichDistraction = "Windows";
-  }
+    whichDistraction = "Window controls";
   else if (voltage < 50 && voltage > 0 )
-  {
-    whichDistraction = "Radio";
-  }
+    whichDistraction = "Radio controls";
   else if (voltage > 50 && voltage < 340)
-  {
-   whichDistraction = "Brakes";
-  }
+    whichDistraction = "Brake pedal";
   else 
+    whichDistraction = "Accelerator pedal";
+
+  //Print distraction notice
+  if (interuptReleased == false)
   {
-    whichDistraction = "Accelerometer";
+    Serial.println("============================================================================================");
+    interuptInitialTime = seconds;
+    Serial.print(whichDistraction);
+    Serial.println(" engaged");
+    timeStamp();
   }
-  Serial.println(whichDistraction);
+  else
+  {
+    Serial.println("============================================================================================");
+    //Serial.println("////////////////////////////////////////////////////////////////////////////////////////////");
+    interuptFinalTime = seconds;
+    int changeintime = (interuptFinalTime - interuptInitialTime);
+    Serial.print(whichDistraction);
+    Serial.print(" released after ");
+    
+    if (changeintime == 0)
+    Serial.print("<1");
+    else
+    Serial.print(changeintime);
+    
+    Serial.println(" seconds");
+    interuptReleased = false;
+    timeStamp();
+  }
+  
   interuptDetected = false;
 }
 
@@ -323,6 +343,7 @@ void whichInterupt()
 //  String timeStamp[] = 
 //}
 
-
+   // EEPROM.clear();
+   // EEPROM.write();
 
 
